@@ -2,6 +2,8 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +20,14 @@ var builder = WebApplication.CreateBuilder(args);
 // ==========================================
 // 1. Service Registration
 // ==========================================
+
+// Configure Forwarded Headers for Reverse Proxy / Cloud Load Balancer Hosting (Nginx, Azure, AWS)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
@@ -50,17 +60,20 @@ builder.Services.AddHealthChecks()
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configure CORS Policy
-var allowedOrigins = builder.Configuration["AllowedOrigins"];
-var originsList = !string.IsNullOrWhiteSpace(allowedOrigins)
-    ? allowedOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    : new[] { "http://localhost:5173", "http://localhost:5174" };
+// Configure CORS Policy (Supports localhost + FRONTEND_URL / AllowedOrigins environment variables)
+var configuredOrigins = builder.Configuration["FRONTEND_URL"] ?? builder.Configuration["AllowedOrigins"];
+var originsList = new List<string> { "http://localhost:5173", "http://localhost:5174" };
+if (!string.IsNullOrWhiteSpace(configuredOrigins))
+{
+    var extraOrigins = configuredOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    originsList.AddRange(extraOrigins);
+}
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy.WithOrigins(originsList)
+        policy.WithOrigins(originsList.Distinct().ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -87,8 +100,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// Configure JWT Bearer Authentication
-var jwtKey = builder.Configuration["Jwt:Key"];
+// Configure JWT Bearer Authentication (Reads Jwt:Key / Jwt__Key / JWT_SECRET from environment or appsettings)
+var jwtKey = builder.Configuration["Jwt:Key"] ?? builder.Configuration["JWT_SECRET"];
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     if (builder.Environment.IsDevelopment())
@@ -225,24 +238,42 @@ var app = builder.Build();
 // 2. HTTP Request Pipeline Configuration
 // ==========================================
 
+app.UseForwardedHeaders();
+
 // Global Exception Handler Middleware (must be first in pipeline)
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-app.UseSwagger();
-app.UseSwaggerUI(c =>
+// Configure Swagger (Enabled in Dev or if EnableSwaggerInProduction is true)
+var enableSwagger = app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("EnableSwaggerInProduction", false);
+if (enableSwagger)
 {
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Small Shop Inventory & Billing API v1");
-    c.RoutePrefix = "swagger";
-});
-
-// app.UseHttpsRedirection();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Small Shop Inventory & Billing API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
 
 app.UseCors("FrontendPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapHealthChecks("/health");
+// JSON Health Check Endpoint returning { "status": "Healthy" }
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var response = new
+        {
+            status = report.Status.ToString()
+        };
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response));
+    }
+});
+
 app.MapControllers();
 
 // ==========================================
