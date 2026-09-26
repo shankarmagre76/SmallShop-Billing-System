@@ -1,0 +1,19 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=YOUR_PRODUCTION_DB_HOST;Database=SmallShopInventoryDb;User Id=YOUR_DB_USER;Password=YOUR_DB_PASSWORD;TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Key": "YOUR_PRODUCTION_JWT_SECRET_KEY_MIN_32_CHARS",
+    "Issuer": "SmallShopInventoryAPI",
+    "Audience": "SmallShopInventoryClients",
+    "ExpirationMinutes": 60
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "AllowedOrigins": "https://your-production-frontend-domain.com"
+}

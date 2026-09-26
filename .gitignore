@@ -1,0 +1,59 @@
+## Ignore Visual Studio, MSBuild, and .NET files
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# User-specific files
+*.suo
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][In]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Ob]j/
+[Ll]og/
+[Ll]ogs/
+
+# Node & Frontend Build
+node_modules/
+dist/
+dist-ssr/
+.vite/
+
+# Database files
+*.mdf
+*.ldf
+*.db
+*.sqlite
+
+# IDE files
+.idea/
+*.swp
+*~
+*.bak
+
+# Environment / Secret files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Scratch files (test scripts)
+scratch/
+
+# OS generated files
+.DS_Store
+Thumbs.db
