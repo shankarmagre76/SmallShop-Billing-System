@@ -62,7 +62,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // Configure CORS Policy (Supports localhost + FRONTEND_URL / AllowedOrigins environment variables)
 var configuredOrigins = builder.Configuration["FRONTEND_URL"] ?? builder.Configuration["AllowedOrigins"];
-var originsList = new List<string> { "http://localhost:5173", "http://localhost:5174" };
+var originsList = new List<string> { 
+    "http://localhost:5173", 
+    "http://localhost:5174", 
+    "https://small-shop-billing-system.vercel.app" 
+};
 if (!string.IsNullOrWhiteSpace(configuredOrigins))
 {
     var extraOrigins = configuredOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);

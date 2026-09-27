@@ -6,7 +6,6 @@ import StatCard from "../../components/dashboard/StatCard";
 import QuickAction from "../../components/dashboard/QuickAction";
 import RecentActivity from "../../components/dashboard/RecentActivity";
 import ErrorMessage from "../../components/common/ErrorMessage";
-import { getHealthCheck } from "../../services/healthService";
 import { getProducts } from "../../services/productService";
 import { getBills } from "../../services/billService";
 import { getLowStockProducts } from "../../services/inventoryService";
@@ -16,7 +15,6 @@ import { ROUTES } from "../../constants/routes";
 const DashboardPage = () => {
   const { user } = useAuth();
 
-  const [apiHealth, setApiHealth] = useState({ loading: true, connected: false });
   const [stats, setStats] = useState({
     productsCount: null,
     lowStockCount: null,
@@ -37,15 +35,7 @@ const DashboardPage = () => {
     setLoading(true);
     setErrors({ products: null, lowStock: null, bills: null });
 
-    // 1. Health check
-    try {
-      const healthRes = await getHealthCheck();
-      setApiHealth({ loading: false, connected: healthRes.connected });
-    } catch {
-      setApiHealth({ loading: false, connected: false });
-    }
-
-    // 2. Concurrent fetching with Promise.allSettled for fault isolation
+    // Concurrent fetching with Promise.allSettled for fault isolation
     const results = await Promise.allSettled([
       getProducts(1, 1),
       getLowStockProducts(5),
@@ -125,45 +115,20 @@ const DashboardPage = () => {
         title={`Welcome back, ${user?.fullName || "Staff Member"} 👋`}
         subtitle="Manage your shop's products, inventory and billing from one place."
       >
+        <button
+          onClick={fetchDashboardData}
+          className="btn btn-outline-secondary d-flex align-items-center gap-2 py-2"
+          disabled={loading}
+          title="Refresh Dashboard Data"
+        >
+          <i className={`bi bi-arrow-clockwise ${loading ? "spin" : ""}`}></i>
+          <span>Refresh</span>
+        </button>
         <Link to={ROUTES.BILLING} className="btn btn-primary d-flex align-items-center gap-2 py-2">
           <i className="bi bi-plus-lg"></i>
           <span>Create New Bill</span>
         </Link>
       </PageHeader>
-
-      {/* API Connection Health Banner */}
-      <div className="card border-0 shadow-sm mb-4">
-        <div className="card-body py-3">
-          <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div className="d-flex align-items-center gap-2">
-              <i className="bi bi-hdd-network text-primary fs-5"></i>
-              <span className="fw-semibold">API Health Status:</span>
-              {apiHealth.loading ? (
-                <span className="badge bg-warning text-dark px-2 py-1">Checking API...</span>
-              ) : apiHealth.connected ? (
-                <span className="badge bg-success px-2 py-1 d-flex align-items-center gap-1">
-                  <span className="spinner-grow spinner-grow-sm" style={{ width: "6px", height: "6px" }}></span>
-                  Connected (HTTP 200 OK)
-                </span>
-              ) : (
-                <span className="badge bg-danger px-2 py-1">API Unavailable</span>
-              )}
-            </div>
-
-            <div className="small text-muted d-flex align-items-center gap-2">
-              <span>Endpoint: <code>{import.meta.env.VITE_API_BASE_URL || "http://localhost:5206/api"}</code></span>
-              <button
-                onClick={fetchDashboardData}
-                className="btn btn-sm btn-outline-secondary py-0 px-2"
-                disabled={loading}
-                title="Refresh Dashboard Data"
-              >
-                <i className="bi bi-arrow-clockwise me-1"></i> Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Summary Stat Cards Grid */}
       <div className="row g-3 mb-4">
