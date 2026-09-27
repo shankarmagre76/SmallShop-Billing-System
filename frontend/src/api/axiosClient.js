@@ -11,9 +11,16 @@ const axiosClient = axios.create({
   timeout: 10000,
 });
 
-// Request Interceptor: Read token from auth storage & attach Authorization header
+// Request Interceptor: Validate baseURL & read token from auth storage
 axiosClient.interceptors.request.use(
   (config) => {
+    if (!config.baseURL) {
+      return Promise.reject(
+        new Error(
+          "Backend API URL (VITE_API_BASE_URL) is not configured in Vercel. Please deploy the ASP.NET Core backend and set VITE_API_BASE_URL."
+        )
+      );
+    }
     const auth = getAuth();
     if (auth && auth.token) {
       config.headers.Authorization = `Bearer ${auth.token}`;
