@@ -17,6 +17,13 @@ using SmallShopInventoryBillingAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Bind to dynamic PORT if provided by cloud hosting provider (e.g. Render, Railway)
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://*:{port}");
+}
+
 // ==========================================
 // 1. Service Registration
 // ==========================================
